@@ -72,15 +72,15 @@ pay:{t:'সদস্যদের চাঁদা জমা',f:[['mid','সদস
 dues:{t:'বকেয়া চাঁদা',f:[['mid','সদস্য আইডি'],['kind','চাঁদার প্রকার','s',KD],['amt','বাকি (৳)','n']]},
 assets:{t:'সম্পদের বিবরণ',f:[['name','সম্পদ'],['desc','বিবরণ'],['val','মূল্য (৳)','n']]}};
 const FIN=['ledger','pay','dues','assets'];
-let U={r:'pub'},tab='home',P={},SR=null,D={items:{},fin:{},members:[],results:[],audit:[]};
+let ERRS=[];let U={r:'pub'},tab='home',P={},SR=null,D={items:{},fin:{},members:[],results:[],audit:[]};
 const isStaff=()=>['admin','gs','fin'].includes(U.r);
 const can=c=>FIN.includes(c)?U.r==='fin':(U.r==='admin'||U.r==='gs');
 const tb=c=>FIN.includes(c)?'fin_items':c==='members'||c==='results'?c:'items';
 const rows=c=>c==='members'?D.members:c==='results'?D.results:FIN.includes(c)?(D.fin[c]||[]):(D.items[c]||[]);
 const SET=()=>Object.assign({name:'হিলফুল ফুযুল শান্তি সংঘ',reg:'পটিয়া উপজেলা সমাজসেবায় নিবন্ধিত রেজিঃ নং- চট্ট: ৩১২৭/২০১৬ইং',addr:'কৈয়গ্রাম, পটিয়া, চট্টগ্রাম।',logo:'',fb:'',yt:'',web:''},(D.items.settings||[])[0]||{});
 const busy=v=>{$('#ld').style.display=v?'block':'none'};
-async function get(n,p){try{const {data,error}=await p;if(error)throw error;try{localStorage.setItem('c_'+n,JSON.stringify(data))}catch(e){}return data}catch(e){try{return JSON.parse(localStorage.getItem('c_'+n))||[]}catch(_){return[]}}}
-async function loadAll(){
+async function get(n,p){try{const {data,error}=await p;if(error)throw error;try{localStorage.setItem('c_'+n,JSON.stringify(data))}catch(e){}return data}catch(e){ERRS.push((e&&e.message)||String(e));try{return JSON.parse(localStorage.getItem('c_'+n))||[]}catch(_){return[]}}}
+async function loadAll(){ERRS=[];
 const it=await get('items',sb.from('items').select('*').order('id'));D.items={};
 for(const r of it)(D.items[r.kind]=D.items[r.kind]||[]).push({id:r.id,...r.data});
 const st=U.r!=='pub';
@@ -91,11 +91,11 @@ D.audit=U.r==='admin'?await get('audit',sb.from('audit').select('*').order('id',
 async function refresh(){busy(1);await loadAll();busy(0);render()}
 async function init(){
 try{const {data:{session}}=await sb.auth.getSession();
-if(session){const {data}=await sb.from('profiles').select('role,member_no').eq('id',session.user.id).maybeSingle();if(data)U={r:data.role==='member'?'mem':data.role,id:data.member_no};if(U.r==='mem')tab='me'}}catch(e){}
-await refresh()}
+if(session){const {data,error:pe}=await sb.from('profiles').select('role,member_no').eq('id',session.user.id).maybeSingle();if(pe)ERRS.push('ভূমিকা জানা যায়নি: '+pe.message);else if(!data)ERRS.push('এই আইডির কোনো ভূমিকা (profiles) বসানো নেই');if(data)U={r:data.role==='member'?'mem':data.role,id:data.member_no};if(U.r==='mem')tab='me'}}catch(e){}
+const pre=ERRS.slice();await loadAll();ERRS.unshift(...pre);render()}
 async function login(){const i=nb($('#li').value).toLowerCase(),p=$('#lp').value;if(!i||!p)return;busy(1);
 const {error}=await sb.auth.signInWithPassword({email:i+'@hfss.app',password:p});busy(0);
-if(error)return alert('আইডি বা পাসওয়ার্ড ভুল (অথবা ইন্টারনেট নেই)');tab='home';await init()}
+if(error)return alert('লগইন হয়নি: '+error.message);tab='home';await init()}
 async function logout(){await sb.auth.signOut();for(const k of['members','fin','results','audit'])localStorage.removeItem('c_'+k);U={r:'pub'};tab='home';await refresh()}
 function pick(el,key){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=Math.min(1,800/Math.max(im.width,im.height)),cv=document.createElement('canvas');cv.width=im.width*m;cv.height=im.height*m;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);cv.toBlob(b=>{P[key]=b},key==='logo'?'image/png':'image/jpeg',.8)};im.src=r.result};r.readAsDataURL(f)}
 async function up(b){const p=Date.now()+'.'+(b.type==='image/png'?'png':'jpg');const {error}=await sb.storage.from('media').upload(p,b,{contentType:b.type});if(error){alert('ছবি আপলোড ব্যর্থ: '+error.message);return''}return sb.storage.from('media').getPublicUrl(p).data.publicUrl}
@@ -154,10 +154,11 @@ const {error}=await sb.rpc('create_login',{p_id:i,p_pw:$('#l_pw').value,p_role:r
 async function setPw(){busy(1);const {error}=await sb.rpc('set_password',{p_id:nb($('#l_id').value).toLowerCase(),p_pw:$('#l_pw').value});busy(0);alert(error?'ত্রুটি: '+error.message:'পাসওয়ার্ড বদলানো হয়েছে')}
 const T=[['home','হোম',1],['members','সদস্য',1],['exec','কার্যকরী পরিষদ',1],['gen','সাধারণ পরিষদ',1],['lists','তালিকা',1],['events','অনুষ্ঠান',1],['branches','অঙ্গ প্রতিষ্ঠান',1],['news','সংগঠন নিউজ',1],['sch','বৃত্তি পরীক্ষা',1],['me','আমার হিসাব',()=>U.r==='mem'],['fin','আয়-ব্যয় ও হিসাব',()=>isStaff()],['adm','অ্যাডমিন',()=>U.r==='admin'],['lg','লগইন',()=>U.r==='pub'],['out','লগআউট',()=>U.r!=='pub']];
 function go(t){if(t==='out')return logout();tab=t;SR=null;render()}
+const bn=()=>ERRS.length?`<div class="card" style="border-left-color:var(--re)"><b style="color:var(--re)">⚠ সমস্যা:</b> ${esc(ERRS[0])}<br><span class="mu">(সার্ভারের তথ্য আনা যায়নি; থাকলে আগের সংরক্ষিত তথ্য দেখানো হচ্ছে)</span></div>`:'';
 function render(){const s=SET();
 $('#hd').innerHTML=`${s.logo?`<img src="${esc(s.logo)}" alt="লোগো">`:''}<div><h1>${esc(s.name)}</h1><p>${esc(s.reg)}</p><p>${esc(s.addr)}</p></div>`;
 $('#bar').innerHTML=T.filter(t=>t[2]===1||t[2]()).map(t=>`<button class="${t[0]===tab?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
-$('#main').innerHTML=tab==='lg'?`<div class="card fg"><h3>লগইন</h3><label>আইডি<input id="li" autocapitalize="none"></label><label>পাসওয়ার্ড<input id="lp" type="password"></label><button onclick="login()">প্রবেশ</button></div>`:(V[tab]||V.home)()}
+$('#main').innerHTML=bn()+(tab==='lg'?`<div class="card fg"><h3>লগইন</h3><label>আইডি<input id="li" autocapitalize="none"></label><label>পাসওয়ার্ড<input id="lp" type="password"></label><button onclick="login()">প্রবেশ</button></div>`:(V[tab]||V.home)())}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 render();init();
 </script></body></html>
