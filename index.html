@@ -88,7 +88,7 @@ D.audit=U.r==='admin'?await get('audit',sb.from('audit').select('*').order('id',
 async function refresh(){busy(1);await loadAll();busy(0);render()}
 async function init(){
 try{const {data:{session}}=await sb.auth.getSession();
-if(session){const {data}=await sb.from('profiles').select('role,member_no').maybeSingle();if(data)U={r:data.role==='member'?'mem':data.role,id:data.member_no};if(U.r==='mem')tab='me'}}catch(e){}
+if(session){const {data}=await sb.from('profiles').select('role,member_no').eq('id',session.user.id).maybeSingle();if(data)U={r:data.role==='member'?'mem':data.role,id:data.member_no};if(U.r==='mem')tab='me'}}catch(e){}
 await refresh()}
 async function login(){const i=nb($('#li').value).toLowerCase(),p=$('#lp').value;if(!i||!p)return;busy(1);
 const {error}=await sb.auth.signInWithPassword({email:i+'@hfss.app',password:p});busy(0);
@@ -105,14 +105,17 @@ if(!e&&pw)({error:e}=await sb.rpc('create_login',{p_id:o.member_no,p_pw:pw,p_rol
 else if(c==='results')({error:e}=await sb.from('results').insert({data:o}));
 else{if(c==='pay'||c==='dues')o.mid=nb(o.mid);({error:e}=await sb.from(tb(c)).insert({kind:c,data:o}))}
 if(e)alert('ত্রুটি: '+e.message);P={}}finally{busy(0)}await refresh()}
-async function del(c,id){if(!confirm('মুছে ফেলবেন? (ইতিহাসে লেখা থাকবে)'))return;busy(1);const {error}=await sb.from(tb(c)).delete().eq('id',id);busy(0);if(error)alert('ত্রুটি: '+error.message);await refresh()}
-async function edit(c,id){const r=rows(c).find(x=>x.id===id);if(!r)return;const n={};
-for(const [k,l,t] of C[c].f){if(t==='i'||t==='p')continue;const v=prompt(l+' (বাতিল করতে Cancel)',r[k]??'');if(v===null)return;n[k]=t==='d'&&!v?null:v.trim()}
-if(c==='members')n.member_no=nb(n.member_no);
-busy(1);let e;
-if(c==='members')({error:e}=await sb.from('members').update(n).eq('id',id));
-else{const {id:_,...d}=r;({error:e}=await sb.from(tb(c)).update({data:{...d,...n}}).eq('id',id))}
-busy(0);if(e)alert('ত্রুটি: '+e.message);await refresh()}
+async function del(c,id){if(!confirm('মুছে ফেলবেন? (ইতিহাসে লেখা থাকবে)'))return;busy(1);const {data,error}=await sb.from(tb(c)).delete().eq('id',id).select();busy(0);if(error)alert('ত্রুটি: '+error.message);else if(!data.length)alert('মোছা যায়নি: অনুমতি নেই');await refresh()}
+function edit(c,id){const r=rows(c).find(x=>x.id===id);if(!r)return;
+const m=document.createElement('div');m.id='md';m.style.cssText='position:fixed;inset:0;background:#000b;z-index:20;overflow:auto;padding:14px';
+m.innerHTML=`<div class="card fg" style="max-width:600px;margin:auto"><h3>সম্পাদনা: ${C[c].t}</h3>${C[c].f.filter(x=>x[2]!=='i'&&x[2]!=='p').map(([k,l,t,o])=>`<label>${l}${t==='t'?`<textarea id="e_${k}" rows=3>${esc(r[k])}</textarea>`:t==='s'?`<select id="e_${k}">${o.split('|').map(x=>`<option${x===r[k]?' selected':''}>${x}</option>`).join('')}</select>`:`<input id="e_${k}" type="${t==='d'?'date':t==='n'?'number':'text'}" value="${esc(r[k])}">`}</label>`).join('')}<button onclick="saveEdit('${c}',${id})">সংরক্ষণ করুন</button><button onclick="$('#md').remove()" style="background:var(--mu)">বাতিল</button></div>`;document.body.appendChild(m)}
+async function saveEdit(c,id){const r=rows(c).find(x=>x.id===id),n={};
+for(const [k,,t] of C[c].f){if(t==='i'||t==='p')continue;const v=$('#e_'+k).value.trim();n[k]=t==='d'&&!v?null:v}
+if(c==='members')n.member_no=nb(n.member_no);busy(1);let q;
+if(c==='members')q=await sb.from('members').update(n).eq('id',id).select();
+else{const {id:_,...d}=r;const o={...d,...n};if(c==='results')q=await sb.from('results').update({data:o}).eq('id',id).select();else q=await sb.from(tb(c)).update({data:o}).eq('id',id).select()}
+busy(0);if(q.error)return alert('ত্রুটি: '+q.error.message);if(!q.data.length)return alert('সংরক্ষণ হয়নি: অনুমতি নেই');
+$('#md').remove();await refresh()}
 const form=c=>can(c)?`<details class="card"><summary>+ নতুন যোগ করুন</summary><div class="fg">${C[c].f.map(([k,l,t,o])=>`<label>${l}${t==='t'?`<textarea id="f_${c}_${k}" rows=3></textarea>`:t==='i'?`<input type="file" accept="image/*" onchange="pick(this,'${c}${k}')">`:t==='s'?`<select id="f_${c}_${k}">${o.split('|').map(x=>`<option>${x}</option>`).join('')}</select>`:`<input id="f_${c}_${k}" type="${t==='d'?'date':t==='n'?'number':t==='p'?'password':'text'}">`}</label>`).join('')}<button onclick="add('${c}')">সংরক্ষণ করুন</button></div></details>`:'';
 function tbl(c,cols,list){const own=!list;list=list||rows(c);cols=cols||(isStaff()?null:C[c].pub);const f=C[c].f.filter(x=>x[2]!=='p'&&(!cols||cols.includes(x[0])));
 if(!list.length)return'<p class="mu">কোনো তথ্য নেই</p>';const ed=own&&can(c);
