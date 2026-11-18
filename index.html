@@ -94,6 +94,7 @@ msgs:{t:'বাণী',f:[['by','নাম'],['post','পদবি'],['txt','ব
 notices:{t:'নোটিশ',f:[['title','নোটিশের শিরোনাম'],['date','তারিখ','d'],['cat','ধরন','s','সাধারণ|জরুরি|পরীক্ষা|অনুষ্ঠান'],['txt','বিস্তারিত','t'],['img','ছবি (ঐচ্ছিক)','i'],['doc','ডকুমেন্ট/PDF (ঐচ্ছিক)','f']]},
 covers:{t:'কভার ছবি',f:[['photo','ছবি','i']]},
 leaders:{t:'সভাপতি / সাধারণ সম্পাদক',f:[['post','পদ','s','সভাপতি|সাধারণ সম্পাদক'],['title','পদবী (ঐচ্ছিক; না দিলে স্বয়ংক্রিয়)'],['name','নাম'],['session','সেশন'],['mob','মোবাইল'],['addr','ঠিকানা'],['bio','পুরো জীবনী','t'],['photo','ছবি','i']]},
+blood:{t:'ব্লাড ডোনার',f:[['name','নাম'],['grp','ব্লাড গ্রুপ','s','A+|A-|B+|B-|O+|O-|AB+|AB-'],['mob','মোবাইল নম্বর'],['addr','ঠিকানা']]},
 exec:{t:'কার্যকরী পরিষদ',pub:['name','post'],f:[['name','নাম'],['post','পদবি'],['mob','মোবাইল']]},
 gen:{t:'সাধারণ পরিষদ',pub:['name'],f:[['name','নাম'],['mob','মোবাইল']]},
 advisors:{t:'উপদেষ্টাদের তালিকা',pub:['name','note'],f:[['name','নাম'],['note','বিবরণ'],['mob','মোবাইল']]},
@@ -128,7 +129,7 @@ D.members=await get('members',st?sb.from('members').select('*').order('id'):sb.f
 D.fin={};if(st)for(const r of await get('fin',sb.from('fin_items').select('*').order('id')))(D.fin[r.kind]=D.fin[r.kind]||[]).push({id:r.id,...r.data});
 const ag=['admin','gs'].includes(U.r);
 D.results=ag?flat(await get('results',sb.from('results').select('*').order('id'))):[];
-D.apps=ag?flat(await get('apps',sb.from('applications').select('*').order('id'))):await get('apps_pub',sb.from('applications_public').select('*').order('id'));
+D.apps=ag?flat(await get('apps',sb.from('applications').select('*').order('id'))):[];
 D.audit=U.r==='admin'?await get('audit',sb.from('audit').select('*').order('id',{ascending:false}).limit(40)):[]}
 async function refresh(){busy(1);await loadAll();busy(0);render()}
 async function init(){
@@ -179,7 +180,7 @@ const form=(c,fo)=>can(c)||fo?`<details class="card"${fo?' open':''}><summary>${
 const X={pay:id=>`<button class="e" onclick="rcpt(${id})">রসিদ</button>`,apps:id=>`<button class="e" onclick="pdfForm(${id})">ফরম PDF</button><button class="e" onclick="admit(${id})">প্রবেশপত্র</button>`};
 function tbl(c,cols,list){const own=!list;list=list||rows(c);cols=cols||(isStaff()&&(c!=='apps'||can(c))?null:C[c].pub);const f=C[c].f.filter(x=>x[2]!=='p'&&(!cols||cols.includes(x[0])));
 if(!list.length)return'<p class="mu">কোনো তথ্য নেই</p>';const ed=own&&can(c),ac=ed||c==='pay';
-return`<div class="sc"><table><tr>${f.map(x=>`<th>${x[1].split(' (')[0]}</th>`).join('')}${ac?'<th></th>':''}</tr>${list.map(r=>`<tr>${f.map(x=>`<td>${x[2]==='i'?(r[x[0]]?`<img src="${esc(r[x[0]])}" height="40">`:''):x[2]==='m'?esc(((r[x[0]]||[]).length)+' ছবি'):x[2]==='f'?(r[x[0]]?`<a href="${esc(r[x[0]])}" target="_blank" rel="noopener">ফাইল</a>`:''):esc(r[x[0]])}</td>`).join('')}${ac?`<td>${(X[c]||(()=>''))(r.id)}${ed?`<button class="e" onclick="edit('${c}',${r.id})">সম্পাদনা</button><button class="x" onclick="del('${c}',${r.id})">মুছুন</button>`:''}</td>`:''}</tr>`).join('')}</table></div>`}
+return`<div class="sc"><table><tr>${c==='blood'?'<th>ক্রমিক নং</th>':''}${f.map(x=>`<th>${x[1].split(' (')[0]}</th>`).join('')}${ac?'<th></th>':''}</tr>${list.map((r,ix)=>`<tr>${c==='blood'?`<td>${bd(ix+1)}</td>`:''}${f.map(x=>`<td>${x[2]==='i'?(r[x[0]]?`<img src="${esc(r[x[0]])}" height="40">`:''):x[2]==='m'?esc(((r[x[0]]||[]).length)+' ছবি'):x[2]==='f'?(r[x[0]]?`<a href="${esc(r[x[0]])}" target="_blank" rel="noopener">ফাইল</a>`:''):esc(r[x[0]])}</td>`).join('')}${ac?`<td>${(X[c]||(()=>''))(r.id)}${ed?`<button class="e" onclick="edit('${c}',${r.id})">সম্পাদনা</button><button class="x" onclick="del('${c}',${r.id})">মুছুন</button>`:''}</td>`:''}</tr>`).join('')}</table></div>`}
 const sec=(c,cols)=>`<h3>${C[c].t}</h3>${tbl(c,cols)}${form(c)}`;
 const sum=(a,k)=>a.reduce((s,x)=>s+(+x[k]||0),0);
 const cards=(c,h)=>(rows(c).map(a=>`<div class="card">${h(a)}${can(c)?` <button class="e" onclick="edit('${c}',${a.id})">সম্পাদনা</button><button class="x" onclick="del('${c}',${a.id})">মুছুন</button>`:''}</div>`).join('')||'<p class="mu">কোনো তথ্য নেই</p>');
@@ -190,7 +191,7 @@ return socHtml()+mqHtml()+`<div class="lay"><div>${nbHtml(5)}</div><aside class=
 notices:()=>`<h3>নোটিশ</h3>${nbHtml(0)}${form('notices')}`,
 srch:()=>srchHtml(),
 members:()=>{const ms=D.members;return`<h3>সদস্য তালিকা (মোট ${ms.length}, সক্রিয় ${ms.filter(m=>m.status==='সক্রিয়').length})</h3>${isStaff()?`<p><button class="b" onclick="exp('members','সদস্য-তালিকা')">Excel (CSV) নামান</button> <button class="b" onclick="prtT('members','সদস্য তালিকা')">তালিকা PDF</button></p>`:''}${importCard('members')}${tbl('members')}${form('members')}`},
-exec:()=>sec('exec')+importCard('exec'),gen:()=>sec('gen')+importCard('gen'),
+exec:()=>sec('exec')+importCard('exec'),gen:()=>sec('gen')+importCard('gen'),blood:()=>sec('blood')+importCard('blood'),
 lists:()=>['advisors','donors','land','past'].map(c=>sec(c)).join(''),
 events:()=>`<h3>অনুষ্ঠানসমূহ</h3>${cards('events',evH)}${form('events')}`,branches:()=>`<h3>অঙ্গ প্রতিষ্ঠান</h3>${cards('branches',brH)}${form('branches')}`,
 news:()=>`<h3>সংগঠন নিউজ</h3>${rows('news').slice().reverse().map(n=>`<div class="card"><b>${esc(n.title)}</b> <span class="mu">${esc(n.date)}</span>${n.img?`<br><img class="n" src="${esc(n.img)}">`:''}<p>${esc(n.txt)}</p>${can('news')?`<button class="e" onclick="edit('news',${n.id})">সম্পাদনা</button><button class="x" onclick="del('news',${n.id})">মুছুন</button>`:''}</div>`).join('')||'<p class="mu">কোনো খবর নেই</p>'}${form('news')}`,
@@ -199,7 +200,7 @@ if(SB==='frm'){const o=formOpen();return h+`<div class="card">${o.msg}</div>`+(o
 h+=`<div class="card"><div class="g2"><label>সাল (ঐচ্ছিক)<input id="s4"></label><label>পর্যায়<select id="s1">${LV.split('|').map(x=>`<option>${x}</option>`).join('')}</select></label><label>শ্রেণী<input id="s2"></label><label>রোল নম্বর<input id="s3"></label></div><p><button class="b" onclick="srch()">ফলাফল দেখুন</button></p>`;
 if(SR)h+=SR.length?SR.map(r=>`<div class="card"><b>${esc(r.name)}</b><br>সাল: ${esc(r.year)} | পর্যায়: ${esc(r.level)} | শ্রেণী: ${esc(r.cls)} | রোল: ${esc(r.roll)}<br>ফলাফল: <span class="ok">${esc(r.res)}</span> ${esc(r.note)}</div>`).join(''):'<p>কোনো ফলাফল পাওয়া যায়নি।</p>';
 h+='</div>';if(can('results'))h+=`<h3>ফলাফল ব্যবস্থাপনা</h3>${tbl('results')}${form('results')}`;return h},
-apps:()=>`<h3>বৃত্তি পরীক্ষার আবেদনসমূহ (মোট ${D.apps.length})</h3>${can('apps')?`${rollPanel()}<div class="card fg"><button onclick="admitAll()">সব প্রবেশপত্র (PDF)</button><button onclick="prtT('apps','বৃত্তি পরীক্ষার আবেদন তালিকা')">আবেদন তালিকা (PDF)</button><button onclick="exp('apps','আবেদন-তালিকা')">Excel (CSV) নামান</button></div>`:''}${tbl('apps')}`,
+apps:()=>can('apps')?`<h3>বৃত্তি পরীক্ষার আবেদনসমূহ${U.r==='admin'?' (মোট '+D.apps.length+')':''}</h3>${rollPanel()}<div class="card fg"><button onclick="admitAll()">সব প্রবেশপত্র (PDF)</button><button onclick="prtT('apps','বৃত্তি পরীক্ষার আবেদন তালিকা')">আবেদন তালিকা (PDF)</button><button onclick="exp('apps','আবেদন-তালিকা')">Excel (CSV) নামান</button></div>${tbl('apps')}`:appLookup(),
 me:()=>{const m=D.members.find(x=>x.member_no===U.id),p=rows('pay').filter(x=>x.mid===U.id),d=rows('dues').filter(x=>x.mid===U.id);
 return`<h3>আমার তথ্য</h3>${m?`<div class="card kv">${C.members.f.filter(x=>x[2]!=='p').map(x=>`<span class="mu">${x[1]}</span><span>${esc(m[x[0]])}</span>`).join('')}</div>`:'<p class="mu">তথ্য পাওয়া যায়নি</p>'}<h3>জমা — মোট ${sum(p,'paid')} ৳</h3>${tbl('pay',['date','kind','paid'],p)}<h3>বাকি — মোট ${sum(d,'amt')} ৳</h3>${tbl('dues',['kind','amt'],d)}`},
 fin:()=>{const l=rows('ledger'),i=sum(l.filter(x=>x.type==='আয়'),'amt'),e=sum(l.filter(x=>x.type==='ব্যয়'),'amt');
@@ -267,7 +268,7 @@ const sideHtml=()=>['সভাপতি','সাধারণ সম্পাদ�
 function showL(id){const a=rows('leaders').find(x=>x.id===id);if(!a)return;modal(`<div style="text-align:center">${a.photo?`<img src="${esc(a.photo)}" style="width:170px;height:210px;object-fit:cover;border-radius:8px;border:2px solid var(--pr)">`:''}<h2 style="margin:8px 0 0;color:var(--pr)">${esc(a.name)}</h2><div style="color:var(--re);font-weight:700">${esc(a.title||a.post)}</div></div><div class="kv" style="margin-top:10px"><span class="mu">সেশন</span><span>${esc(a.session)}</span><span class="mu">ঠিকানা</span><span>${esc(a.addr)}</span><span class="mu">মোবাইল</span><span>${a.mob?`<a href="tel:${esc(nb(a.mob))}">📞 ${esc(a.mob)}</a>`:''}</span></div>${a.bio?`<h3>জীবনী</h3><p style="white-space:pre-wrap">${esc(a.bio)}</p>`:''}`)}
 let Q='',HS='',SI=0,STM=null;
 function doSearch(){Q=$('#qs').value.trim();if(!Q)return;tab='srch';render()}
-function srchHtml(){const q=Q.toLowerCase(),M=[['activities','home'],['notices','notices'],['news','news'],['events','events'],['branches','branches'],['msgs','home'],['leaders','home'],['exec','exec'],['gen','gen'],['advisors','lists'],['donors','lists'],['land','lists'],['past','lists'],['members','members'],['apps','apps'],['results','sch']];let h=`<h3>খোঁজার ফলাফল: “${esc(Q)}”</h3>`,n=0;
+function srchHtml(){const q=Q.toLowerCase(),M=[['activities','home'],['notices','notices'],['news','news'],['events','events'],['branches','branches'],['msgs','home'],['leaders','home'],['exec','exec'],['gen','gen'],['blood','blood'],['advisors','lists'],['donors','lists'],['land','lists'],['past','lists'],['members','members'],['apps','apps'],['results','sch']];let h=`<h3>খোঁজার ফলাফল: “${esc(Q)}”</h3>`,n=0;
 for(const [c,t] of M){const f=C[c].f.filter(x=>!['p','i','f','m','h'].includes(x[2])&&((isStaff()&&(c!=='apps'||can('apps')))||!C[c].pub||C[c].pub.includes(x[0])));
 for(const r of rows(c)){if(!f.some(x=>String(r[x[0]]??'').toLowerCase().includes(q)))continue;n++;h+=`<div class="card"><b style="color:var(--re)">${C[c].t}</b><br>${f.slice(0,3).map(x=>esc(r[x[0]])).filter(Boolean).join(' — ')}<br><button class="e" onclick="${c==='notices'?`showN(${r.id})`:`go('${t}')`}">খুলুন</button></div>`}}
 return h+(n?'':'<p class="mu">কিছু পাওয়া যায়নি।</p>')}
@@ -302,10 +303,15 @@ else{const t=tb(c);if(mode==='rep'){({error:e}=await sb.from(t).delete().eq('kin
 alert(e?'ত্রুটি: '+e.message:'হয়ে গেছে: '+out.length+'টি সারি')}catch(x){alert('ফাইল পড়া যায়নি: '+x.message)}finally{busy(0)}await refresh()}
 const socHtml=()=>{const s=SET(),L=[['fb','📘 ফেসবুক'],['yt','▶️ ইউটিউব'],['web','🌐 ওয়েবসাইট']].filter(([k])=>/^https?:\/\//.test(s[k]||''));
 const h=L.map(([k,n])=>`<a class="ln" target="_blank" rel="noopener" href="${esc(s[k])}">${n}</a>`).join('')+(s.email?`<a class="ln" href="mailto:${esc(s.email)}">✉️ ইমেইল</a>`:'');
-return h?`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin:10px 0">${h}</div>`:(U.r==='admin'?'<p class="mu" style="text-align:center">(অ্যাডমিন ট্যাব থেকে ফেসবুক, ইউটিউব ও ইমেইলের লিংক বসান)</p>':'')};
-const TL={home:['হোম'],news:['সংগঠন নিউজ'],branches:['অঙ্গ প্রতিষ্ঠান'],sch:['বৃত্তি পরীক্ষা'],events:['অনুষ্ঠান'],apps:['আবেদন'],notices:['নোটিশ'],members:['সদস্য'],exec:['কার্যকরী পরিষদ'],gen:['সাধারণ পরিষদ'],lists:['তালিকা'],fin:['আয়-ব্যয় ও হিসাব',()=>isStaff()],me:['আমার হিসাব',()=>U.r==='mem'],adm:['অ্যাডমিন',()=>U.r==='admin'],lg:['লগইন',()=>U.r==='pub'],out:['লগআউট',()=>U.r!=='pub']};
-const R=[['home','notices','news','branches','sch','events','apps'],['members','exec','gen','lists','fin','me','adm','lg','out']];
-function go(t){if(t==='out')return logout();tab=t;SR=null;SB='res';render()}
+return h?`<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;align-items:center;margin:10px 0"><span style="font-weight:700;color:var(--re);margin-right:6px">সামাজিক যোগাযোগ:</span>${h}</div>`:(U.r==='admin'?'<p class="mu" style="text-align:center">(অ্যাডমিন ট্যাব থেকে ফেসবুক, ইউটিউব ও ইমেইলের লিংক বসান)</p>':'')};
+let AR=null,BG='';
+const appLookup=()=>`<h3>আপনার আবেদন দেখুন</h3><div class="card fg"><p class="mu" style="margin:0">আবেদনের সময় দেওয়া পর্যায়, শ্রেণী ও মোবাইল নম্বর দিন। তিনটি সঠিক হলেই শুধু আপনার আবেদন দেখা যাবে।</p><label>পর্যায়<select id="al">${LV.split('|').map(x=>`<option>${x}</option>`).join('')}</select></label><label>শ্রেণী<input id="acl"></label><label>মোবাইল নম্বর<input id="am" inputmode="tel"></label><button onclick="findApp()">আবেদন দেখুন</button></div>`+(AR?(AR.length?AR.map((a,i)=>`<div class="card">${ph(a)}<b>${esc(a.name)}</b><br>পিতা: ${esc(a.father)} | মাতা: ${esc(a.mother)}<br>পর্যায়: ${esc(a.level)} | শ্রেণী: ${esc(a.cls)} | বিদ্যালয়: ${esc(a.school)}<br>সাল: ${esc(a.year)} | রোল নম্বর: ${a.roll?`<b class="ok">${esc(a.roll)}</b>`:'এখনো বরাদ্দ হয়নি'}<div style="clear:both;margin-top:8px"><button class="e" onclick="formO(${i})">আবেদন ফরম (PDF)</button>${a.roll?`<button class="e" onclick="admitO(${i})">প্রবেশপত্র ডাউনলোড</button>`:'<div class="mu">প্রবেশপত্র রোল নম্বর বরাদ্দের পর পাওয়া যাবে।</div>'}</div></div>`).join(''):'<p>কোনো আবেদন পাওয়া যায়নি। তথ্য মিলিয়ে দেখুন।</p>'):'');
+async function findApp(){const mb=$('#am').value,cl=$('#acl').value;if(!cl||!mb)return alert('শ্রেণী ও মোবাইল নম্বর দিন');busy(1);const {data,error}=await sb.rpc('find_application',{p_level:$('#al').value,p_cls:cl,p_mob:mb});busy(0);if(error)return alert('ত্রুটি: '+error.message);AR=data||[];render()}
+function withA(fn,i){const o=D.apps;D.apps=AR;try{fn(AR[i].id)}finally{D.apps=o}}
+const formO=i=>withA(pdfForm,i),admitO=i=>withA(admit,i);
+const TL={home:['হোম'],news:['সংগঠন নিউজ'],branches:['অঙ্গ প্রতিষ্ঠান'],sch:['বৃত্তি পরীক্ষা'],events:['অনুষ্ঠান'],apps:['আবেদন'],notices:['নোটিশ'],members:['সদস্য'],exec:['কার্যকরী পরিষদ'],gen:['সাধারণ পরিষদ'],blood:['ব্লাড ডোনার'],lists:['তালিকা'],fin:['আয়-ব্যয় ও হিসাব',()=>isStaff()],me:['আমার হিসাব',()=>U.r==='mem'],adm:['অ্যাডমিন',()=>U.r==='admin'],lg:['লগইন',()=>U.r==='pub'],out:['লগআউট',()=>U.r!=='pub']};
+const R=[['home','notices','news','branches','sch','events','apps'],['members','exec','gen','blood','lists','fin','me','adm','lg','out']];
+function go(t){if(t==='out')return logout();tab=t;SR=null;AR=null;SB='res';render()}
 const bn=()=>ERRS.length?`<div class="card" style="border-left-color:var(--re)"><b style="color:var(--re)">⚠ সমস্যা:</b> ${esc(ERRS[0])}<br><span class="mu">(সার্ভারের তথ্য আনা যায়নি; থাকলে আগের সংরক্ষিত তথ্য দেখানো হচ্ছে)</span></div>`:'';
 function render(){const s=SET();
 const cov=rows('covers').filter(c=>c.photo),sig=JSON.stringify([s.name,s.logo,s.addr,s.reg,s.est_year,s.est_date,s.regno,s.cover_h,cov.map(c=>c.photo)]);
