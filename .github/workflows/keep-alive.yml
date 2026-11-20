@@ -1,0 +1,12 @@
+- name: Ping Supabase REST endpoint
+  env:
+    SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+    SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  run: |
+    URL="$(echo "$SUPABASE_URL" | tr -d '[:space:]')"
+    URL="${URL%/}"
+
+    curl --globoff -fsS \
+      "$URL/rest/v1/blood_donors?select=id&limit=1" \
+      -H "apikey: $SUPABASE_KEY" \
+      -H "Authorization: Bearer $SUPABASE_KEY"
