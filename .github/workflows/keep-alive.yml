@@ -1,17 +1,12 @@
-name: Keep Supabase Alive
+- name: Ping Supabase REST endpoint
+  env:
+    SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+    SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+  run: |
+    URL="$(echo "$SUPABASE_URL" | tr -d '[:space:]')"
+    URL="${URL%/}"
 
-on:
-  schedule:
-    # প্রতি ৩ দিন পরপর চলবে
-    - cron: '0 0 */3 * *'
-  workflow_dispatch:
-
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Ping Supabase REST endpoint
-        run: |
-          curl -fsS -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/blood_donors?select=*&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_API_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_API_KEY }}"
+    curl --globoff -fsS \
+      "$URL/rest/v1/blood_donors?select=id&limit=1" \
+      -H "apikey: $SUPABASE_KEY" \
+      -H "Authorization: Bearer $SUPABASE_KEY"
