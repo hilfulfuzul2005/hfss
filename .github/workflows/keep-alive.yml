@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Ping Supabase REST endpoint
+      - name: Ping Supabase members table
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_API_KEY" ]; then
             echo "Error: Supabase secrets are missing!"
             exit 1
           fi
@@ -23,17 +23,17 @@ jobs:
           URL=$(echo "$SUPABASE_URL" | tr -d '[:space:]')
           URL="${URL%/}"
 
-          echo "Checking Supabase connection..."
+          echo "Checking Supabase members table..."
 
           HTTP_CODE=$(curl --globoff -sS -o /dev/null -w "%{http_code}" \
-            "$URL/rest/v1/blood_donors?select=id&limit=1" \
-            -H "apikey: $SUPABASE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_KEY")
+            "$URL/rest/v1/members?select=id&limit=1" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY")
 
           echo "HTTP status: $HTTP_CODE"
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "Supabase ping successful!"
+            echo "Supabase members table ping successful!"
           else
             echo "Supabase ping failed!"
             exit 1
