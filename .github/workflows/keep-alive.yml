@@ -23,10 +23,10 @@ jobs:
           URL=$(echo "$SUPABASE_URL" | tr -d '[:space:]')
           URL="${URL%/}"
 
-          echo "Checking Supabase members table..."
+          echo "Checking Supabase members_public table..."
 
           HTTP_CODE=$(curl --globoff -sS -o /dev/null -w "%{http_code}" \
-            "$URL/rest/v1/members?select=id&limit=1" \
+            "$URL/rest/v1/members_public?select=member_no&limit=1" \
             -H "apikey: $SUPABASE_API_KEY" \
             -H "Authorization: Bearer $SUPABASE_API_KEY")
 
