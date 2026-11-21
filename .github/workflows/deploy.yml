@@ -21,9 +21,9 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p ${{ secrets.SSH_PORT }} -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Deploy files via rsync
+      - name: Deploy files via Tar Stream over SSH
         run: |
-          rsync -avz \
+          tar \
             --exclude='.git*' \
             --exclude='.github*' \
             --exclude='.htaccess' \
@@ -31,5 +31,4 @@ jobs:
             --exclude='.well-known' \
             --exclude='cgi-bin' \
             --exclude='php.ini' \
-            -e "ssh -p ${{ secrets.SSH_PORT }} -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" \
-            ./ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/home/${{ secrets.SSH_USER }}/public_html/
+            -czf - . | ssh -p ${{ secrets.SSH_PORT }} -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "tar -xzf - -C /home/${{ secrets.SSH_USER }}/public_html/"
