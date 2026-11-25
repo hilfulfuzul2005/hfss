@@ -78,7 +78,7 @@ button.e{background:#fff;border:1.5px solid var(--pr);color:var(--pr);border-rad
 .ok{color:var(--pr);font-weight:700}
 summary{cursor:pointer;color:var(--re);font-weight:700}
 img.n{max-width:100%;border-radius:8px}
-#ld{position:fixed;inset:auto 0 0 0;background:var(--re);color:#fff;text-align:center;padding:6px;display:none}
+#visitorBox{text-align:center;padding:12px;margin:16px 0 4px;border-top:2px solid var(--pr);color:var(--pr);font-weight:700;background:var(--p2);border-radius:8px}#ld{position:fixed;inset:auto 0 0 0;background:var(--re);color:#fff;text-align:center;padding:6px;display:none}
 @page sheet{size:A4 landscape;margin:0}
 .sheet{page:sheet;width:297mm;height:209mm;display:flex;break-after:page;background:#fff;margin:0 auto 14px;box-shadow:0 0 6px #0003}
 .ac2{width:148.5mm;height:100%;box-sizing:border-box;padding:6mm;overflow:hidden}
@@ -216,7 +216,7 @@ const SN=()=>`<div style="display:flex;gap:8px;margin:10px 0"><button class="${S
 const sLink=()=>location.origin+location.pathname+'#sch';
 const V={
 home:()=>{const s=SET(),L=[['fb','ফেসবুক'],['yt','ইউটিউব'],['web','ওয়েবসাইট']].filter(([k])=>/^https?:\/\//.test(s[k]||'')),ph=['ph1','ph2','ph3'].filter(k=>s[k]);
-return socHtml()+donBtn()+mqHtml()+`<div class="lay"><div>${nbHtml(5)}${adsHtml()}</div><aside class="sd">${sideHtml()}</aside></div><h3>সংগঠনের কার্যক্রম</h3>${cards('activities',actH)}${form('activities')}${rcptCard()}<h3>যোগাযোগ</h3>${ph.map(k=>`<a class="ln r" href="tel:${esc(nb(s[k]))}">📞 ${esc(s[k])}</a>`).join('')||'<p class="mu">নম্বর দেওয়া হয়নি</p>'}${s.email?`<p>ইমেইল: <b>${esc(s.email)}</b></p>`:''}<h3>বাণী</h3>${cards('msgs',a=>`${esc(a.txt)}<br><b>— ${esc(a.by)}</b> <span class="mu">${esc(a.post)}</span>`)}${form('msgs')}`},
+return socHtml()+donBtn()+mqHtml()+`<div class="lay"><div>${nbHtml(5)}${adsHtml()}</div><aside class="sd">${sideHtml()}</aside></div><h3>সংগঠনের কার্যক্রম</h3>${cards('activities',actH)}${form('activities')}${rcptCard()}<h3>যোগাযোগ</h3>${ph.map(k=>`<a class="ln r" href="tel:${esc(nb(s[k]))}">📞 ${esc(s[k])}</a>`).join('')||'<p class="mu">নম্বর দেওয়া হয়নি</p>'}${s.email?`<p>ইমেইল: <b>${esc(s.email)}</b></p>`:''}<h3>বাণী</h3>${cards('msgs',a=>`${esc(a.txt)}<br><b>— ${esc(a.by)}</b> <span class="mu">${esc(a.post)}</span>`)}${form('msgs')}<div id="visitorBox">👁️ মোট ওয়েবসাইট ভিজিটর: <span id="visitorTotal">লোড হচ্ছে…</span></div>`},
 notices:()=>`<h3>নোটিশ</h3>${nbHtml(0)}${form('notices')}`,
 srch:()=>srchHtml(),res:()=>resView(),
 members:()=>{const ms=D.members;return`<h3>সদস্য তালিকা (মোট ${ms.length}, সক্রিয় ${ms.filter(m=>m.status==='সক্রিয়').length})</h3>${isStaff()?`<p><button class="b" onclick="exp('members','সদস্য-তালিকা')">Excel (CSV) নামান</button> <button class="b" onclick="prtT('members','সদস্য তালিকা')">তালিকা PDF</button></p>`:''}${importCard('members')}${tbl('members')}${form('members')}`},
@@ -485,5 +485,17 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();DP=e});
 addEventListener('appinstalled',()=>{$('#ins').style.display='none'});
 async function installApp(){if(DP){DP.prompt();await DP.userChoice;DP=null;return}alert(/iphone|ipad|ipod/i.test(navigator.userAgent)?'Safari-তে নিচের শেয়ার (⬆) বাটন চেপে "Add to Home Screen" বেছে নিন।':'ব্রাউজারের মেনু (⋮) চেপে "Install app" বা "Add to Home screen" বেছে নিন।')}
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
-route();render();init();
+async function loadVisitorCount(){
+  try{
+    const {data,error}=await sb.rpc('site_visit_count');
+    if(error)throw error;
+    const el=$('#visitorTotal');
+    if(el)el.textContent=bd(data||0);
+  }catch(e){
+    const el=$('#visitorTotal');
+    if(el)el.textContent='কাউন্ট পাওয়া যায়নি';
+    console.warn('Visitor counter:',e.message||e);
+  }
+}
+route();render();init();loadVisitorCount();
 </script></body></html>
